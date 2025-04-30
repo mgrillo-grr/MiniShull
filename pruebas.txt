@@ -1,3 +1,8 @@
+
+
+main
+execve(ft_strjoin("/usr/bin/", input), ft_split(input, ' '), envp);
+
 c3r11s2% bash
 mgrillo@c3r11s2:~/philo_con_data$ << a  ls >b
 > sadasd
@@ -32,3 +37,10 @@ mgrillo@c3r11s2:~/philo_con_data$ exit asdfghjkl2
 exit
 bash: exit: asdfghjkl2: numeric argument required
 mgrillo@c3r11s2:~/philo_con_data$ 
+
+
+
+
+
+1) grep hola < text.txt | wc -w   
+>
