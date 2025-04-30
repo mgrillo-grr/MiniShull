@@ -1,0 +1,34 @@
+c3r11s2% bash
+mgrillo@c3r11s2:~/philo_con_data$ << a  ls >b
+> sadasd
+> a
+mgrillo@c3r11s2:~/philo_con_data$ > b << a ls
+> asdas
+> a
+mgrillo@c3r11s2:~/philo_con_data$ > c << a lsa
+> asd
+> a
+Command 'lsa' not found, but there are 19 similar ones.
+mgrillo@c3r11s2:~/philo_con_data$ > e << a ls | << b ls -la > d
+> aasda
+> a
+> b
+mgrillo@c3r11s2:~/philo_con_data$ > f << a lsa | << b lss -la > h
+aasda
+a
+b
+
+Command 'lsa' not found, but there are 19 similar ones.
+Command 'lss' not found, but there are 15 similar ones.
+mgrillo@c3r11s2:~/philo_con_data$ 
+mgrillo@c3r11s2:~/philo_con_data$ > f << a lsa | << b lss -la > h
+> asd
+> a
+> b
+Command 'lss' not found, but there are 15 similar ones.
+Command 'lsa' not found, but there are 19 similar ones.
+mgrillo@c3r11s2:~/philo_con_data$ bash
+mgrillo@c3r11s2:~/philo_con_data$ exit asdfghjkl2
+exit
+bash: exit: asdfghjkl2: numeric argument required
+mgrillo@c3r11s2:~/philo_con_data$ 
