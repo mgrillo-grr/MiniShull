@@ -152,9 +152,14 @@ int	main(int argc, char **argv, char **envp)
 		}
 		if (*input)
 		{
+			cmd_name = NULL;
 			add_history(input);
 			shell.cmd = parse_input(input, &shell);
-			if (shell.cmd && shell.cmd->args && shell.cmd->args[0])
+			if (!shell.cmd && *input)
+			{
+				handle_unclosed_quotes(&shell);
+			}
+			else if (shell.cmd && shell.cmd->args && shell.cmd->args[0])
 			{
 				cmd_name = ft_strdup(shell.cmd->args[0]);
 				if (cmd_name)
@@ -162,11 +167,11 @@ int	main(int argc, char **argv, char **envp)
 					shell.exit_status = execute_cmd(&shell);
 					if (shell.exit_status == 127)
 						handle_command_not_found(cmd_name, &shell);
+					free(cmd_name);
 				}
 			}
-			if (cmd_name)
-				free(cmd_name);
-			free_cmd(shell.cmd);
+			if (shell.cmd)
+				free_cmd(shell.cmd);
 		}
 		free(input);
 	}

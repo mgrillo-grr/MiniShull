@@ -30,22 +30,37 @@ static char	*expand_exit_status(char *str, t_shell *shell)
 	char	*exit_str;
 	char	*before;
 	char	*after;
-	char	*dollar_pos;
+	int		i;
+	char	quote;
 
-	dollar_pos = ft_strnstr(str, "$?", ft_strlen(str));
-	if (!dollar_pos)
-		return (ft_strdup(str));
+	result = ft_strdup(str);
+	i = 0;
+	quote = 0;
+	while (result[i])
+	{
+		if (result[i] == '\'' && !quote)
+			quote = '\'';
+		else if (result[i] == '"' && !quote)
+			quote = '"';
+		else if (result[i] == quote)
+			quote = 0;
+		else if (result[i] == '$' && result[i + 1] == '?' && quote != '\'')
+		{
+			before = ft_substr(result, 0, i);
+			after = ft_strdup(result + i + 2);
+			exit_str = ft_itoa(shell->exit_status);
 
-	before = ft_substr(str, 0, dollar_pos - str);
-	after = ft_strdup(dollar_pos + 2);
-	exit_str = ft_itoa(shell->exit_status);
+			free(result);
+			result = ft_strjoin(before, exit_str);
+			result = ft_strjoin(result, after);
 
-	result = ft_strjoin(before, exit_str);
-	result = ft_strjoin(result, after);
-
-	free(before);
-	free(after);
-	free(exit_str);
+			free(before);
+			free(after);
+			free(exit_str);
+			i += ft_strlen(exit_str) - 1;
+		}
+		i++;
+	}
 
 	return (result);
 }
@@ -69,12 +84,32 @@ static char	*expand_env_vars(char *str, t_env *env)
 	char	*key;
 	int		i;
 	int		j;
+	char	quote;
 
 	result = ft_strdup(str);
 	i = 0;
+	quote = 0;
 	while (result[i])
 	{
-		if (result[i] == '$' && result[i + 1] && result[i + 1] != '?' && result[i + 1] != ' ')
+		if (!quote && (result[i] == '\'' || result[i] == '"'))
+		{
+			quote = result[i];
+			i++;
+			continue;
+		}
+		if (quote && result[i] == quote)
+		{
+			quote = 0;
+			i++;
+			continue;
+		}
+		if (quote == '\'')
+		{
+			i++;
+			continue;
+		}
+		if (result[i] == '$' && result[i + 1] && 
+			result[i + 1] != '?' && result[i + 1] != ' ')
 		{
 			j = i + 1;
 			while (result[j] && (ft_isalnum(result[j]) || result[j] == '_'))
@@ -95,7 +130,8 @@ static char	*expand_env_vars(char *str, t_env *env)
 			}
 			free(key);
 		}
-		i++;
+		else
+			i++;
 	}
 	return (result);
 }

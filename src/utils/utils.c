@@ -28,6 +28,79 @@ int	ft_strcmp(const char *s1, const char *s2)
 }
 
 /*
+ * Función: remove_quotes
+ * ---------------------
+ * Remueve las comillas simples y dobles de un string.
+ */
+t_quote_info	*remove_quotes(char *str)
+{
+	t_quote_info	*info;
+	char	*result;
+	int		i;
+	int		j;
+	char	outer_quote;
+	char	inner_quote;
+
+	info = malloc(sizeof(t_quote_info));
+	if (!info)
+		return (NULL);
+	result = malloc(ft_strlen(str) + 1);
+	if (!result)
+	{
+		free(info);
+		return (NULL);
+	}
+
+	i = 0;
+	j = 0;
+	outer_quote = 0;
+	inner_quote = 0;
+	info->has_single = 0;
+	info->has_double = 0;
+
+	while (str[i])
+	{
+		if (!outer_quote && str[i] == '\'')
+		{
+			outer_quote = '\'';
+			info->has_single = 1;
+		}
+		else if (!outer_quote && str[i] == '"')
+		{
+			outer_quote = '"';
+			info->has_double = 1;
+		}
+		else if (outer_quote == '\'' && str[i] == '\'')
+			outer_quote = 0;
+		else if (outer_quote == '"' && str[i] == '"')
+			outer_quote = 0;
+		else if (outer_quote == '"' && !inner_quote && str[i] == '\'')
+		{
+			inner_quote = '\'';
+			result[j++] = str[i];
+		}
+		else if (inner_quote == '\'' && str[i] == '\'')
+		{
+			inner_quote = 0;
+			result[j++] = str[i];
+		}
+		else
+			result[j++] = str[i];
+		i++;
+	}
+	result[j] = '\0';
+
+	if (j == 0)
+	{
+		free(result);
+		result = ft_strdup(str);
+	}
+
+	info->str = result;
+	return (info);
+}
+
+/*
  * Función: add_token
  * ------------------
  * Añade un nuevo token a la lista de tokens.
@@ -35,36 +108,25 @@ int	ft_strcmp(const char *s1, const char *s2)
 char	**add_token(char **tokens, int *token_count, char *str, int len)
 {
 	char	**new_tokens;
-	char	*new_str;
 	int		i;
 
-	new_str = ft_substr(str, 0, len);
-	if (!new_str)
-		return (NULL);
+	if (!str || !len)
+		return (tokens);
 
 	new_tokens = malloc(sizeof(char *) * (*token_count + 2));
 	if (!new_tokens)
+		return (NULL);
+
+	for (i = 0; i < *token_count; i++)
+		new_tokens[i] = tokens[i];
+
+	new_tokens[*token_count] = ft_strdup(str);
+	if (!new_tokens[*token_count])
 	{
-		free(new_str);
+		free(new_tokens);
 		return (NULL);
 	}
 
-	i = 0;
-	while (i < *token_count)
-	{
-		new_tokens[i] = ft_strdup(tokens[i]);
-		if (!new_tokens[i])
-		{
-			free(new_str);
-			while (--i >= 0)
-				free(new_tokens[i]);
-			free(new_tokens);
-			return (NULL);
-		}
-		i++;
-	}
-
-	new_tokens[*token_count] = new_str;
 	new_tokens[*token_count + 1] = NULL;
 	(*token_count)++;
 

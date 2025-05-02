@@ -20,7 +20,7 @@ static int	open_input_file(char *filename)
 	if (fd == -1)
 	{
 		ft_putstr_fd(filename, 2);
-		ft_putendl_fd(": No such file or directory", 2);
+		ft_putendl_fd(ERR_NO_FILE, 2);
 		return (-1);
 	}
 	return (fd);
@@ -41,7 +41,7 @@ static int	open_output_file(char *filename, int append)
 	if (fd == -1)
 	{
 		ft_putstr_fd(filename, 2);
-		ft_putendl_fd(": Permission denied", 2);
+		ft_putendl_fd(ERR_NO_PERM, 2);
 		return (-1);
 	}
 	return (fd);

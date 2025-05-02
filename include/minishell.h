@@ -70,6 +70,16 @@
 /* Variable global para manejar señales */
 extern int	g_signal_received;
 
+typedef struct s_quote_info
+{
+	char	*str;
+	int		has_single;
+	int		has_double;
+} t_quote_info;
+
+// Funciones de manejo de quotes
+t_quote_info	*remove_quotes(char *str);
+
 typedef struct s_env
 {
     char            *key;
@@ -141,10 +151,11 @@ char    *find_command_path(char *cmd, t_env *env);
 void    setup_signals(void);
 void    reset_signals(void);
 
-// Error handling functions
+// Error handlers
 void	print_error_prefix(void);
 void	print_error_number(int number);
 void	handle_command_not_found(char *cmd, t_shell *shell);
+void	handle_unclosed_quotes(t_shell *shell);
 
 // Utils
 void    error_msg(char *msg);

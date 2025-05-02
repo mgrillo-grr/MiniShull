@@ -59,3 +59,19 @@ void	handle_command_not_found(char *cmd, t_shell *shell)
 		ft_putstr_fd(cmd, 2);
 	ft_putendl_fd(ERR_NOT_FOUND, 2);
 }
+
+/*
+ * Función: handle_unclosed_quotes
+ * -----------------------------
+ * Maneja el caso de comillas sin cerrar, actualizando el estado de salida
+ * y mostrando el mensaje de error apropiado.
+ *
+ * Parámetros:
+ *   shell: Estructura principal del shell
+ */
+void	handle_unclosed_quotes(t_shell *shell)
+{
+	shell->exit_status = 2;
+	print_error_prefix();
+	ft_putendl_fd("Error: Unclosed quotes", 2);
+}

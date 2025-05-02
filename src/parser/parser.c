@@ -10,6 +10,9 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
 #include "minishell.h"
 
 /*
@@ -225,26 +228,61 @@ t_cmd	*parse_input(char *input, t_shell *shell)
 		}
 		else
 		{
-			char *expanded = expand_token(tokens[i], shell);
+			// Primero expandir las variables si no está entre comillas simples
+			char *expanded = NULL;
+			if (tokens[i][0] == '\'' || 
+				(tokens[i][0] != '"' && !ft_strchr(tokens[i], '$')))
+			{
+				// Si empieza con comilla simple o no tiene variables, no expandir
+				expanded = ft_strdup(tokens[i]);
+			}
+			else
+			{
+				// Expandir variables
+				expanded = expand_token(tokens[i], shell);
+			}
+
 			if (!expanded)
 			{
 				free_array(tokens);
 				free_cmd(cmd_list);
 				return (NULL);
 			}
-			char **new_args = add_token(args, &arg_count, expanded, ft_strlen(expanded));
+
+			// Luego procesar las comillas
+			t_quote_info *info = remove_quotes(expanded);
 			free(expanded);
-			if (!new_args)
+
+			if (!info)
 			{
-				free_array(args);
 				free_array(tokens);
 				free_cmd(cmd_list);
 				return (NULL);
 			}
+
+			char **new_args = malloc(sizeof(char *) * (arg_count + 2));
+			if (!new_args)
+			{
+				free(info->str);
+				free(info);
+				free_array(tokens);
+				free_cmd(cmd_list);
+				return (NULL);
+			}
+
+			int j;
+			for (j = 0; j < arg_count; j++)
+				new_args[j] = args[j];
+
+			new_args[arg_count] = info->str;
+			new_args[arg_count + 1] = NULL;
+			arg_count++;
+
 			if (args)
-				free_array(args);
+				free(args);
 			args = new_args;
 			current->args = args;
+			free(info);
 		}
 		i++;
 	}
