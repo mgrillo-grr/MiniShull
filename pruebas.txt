@@ -44,3 +44,24 @@ mgrillo@c3r11s2:~/philo_con_data$
 
 1) grep hola < text.txt | wc -w   
 >
+
+
+
+
+ECHO:
+$ echo ''
+                  # línea vacía
+$ echo ""
+                  # línea vacía
+$ e"c"ho ""
+                  # línea vacía
+$ e"c"ho ''
+                  # línea vacía
+$ e"c"ho "$USER"
+mgrillo           # expande la variable
+$ e"c"ho '"$USER"'
+"$USER"           # mantiene el texto literal
+$ e"c"ho "$uasgasg"
+                  # línea vacía porque la variable no existe
+$ e"c"ho '"$uasgasg"'
+"$uasgasg"        # mantiene el texto literal

@@ -39,7 +39,6 @@ t_quote_info	*remove_quotes(char *str)
 	int		i;
 	int		j;
 	char	outer_quote;
-	char	inner_quote;
 
 	info = malloc(sizeof(t_quote_info));
 	if (!info)
@@ -51,50 +50,50 @@ t_quote_info	*remove_quotes(char *str)
 		return (NULL);
 	}
 
+	// Si es "" o '', devolver cadena vacía
+	if (ft_strlen(str) == 2 && 
+		((str[0] == '"' && str[1] == '"') || 
+		 (str[0] == '\'' && str[1] == '\''))) 
+	{
+		result[0] = '\0';
+		info->str = result;
+		info->has_single = (str[0] == '\'');
+		info->has_double = (str[0] == '"');
+		return info;
+	}
+
 	i = 0;
 	j = 0;
 	outer_quote = 0;
-	inner_quote = 0;
 	info->has_single = 0;
 	info->has_double = 0;
 
 	while (str[i])
 	{
+		// Si encontramos una comilla simple
 		if (!outer_quote && str[i] == '\'')
 		{
 			outer_quote = '\'';
 			info->has_single = 1;
 		}
+		// Si encontramos una comilla doble
 		else if (!outer_quote && str[i] == '"')
 		{
 			outer_quote = '"';
 			info->has_double = 1;
 		}
-		else if (outer_quote == '\'' && str[i] == '\'')
+		// Si encontramos una comilla que cierra
+		else if (outer_quote && str[i] == outer_quote)
 			outer_quote = 0;
-		else if (outer_quote == '"' && str[i] == '"')
-			outer_quote = 0;
-		else if (outer_quote == '"' && !inner_quote && str[i] == '\'')
-		{
-			inner_quote = '\'';
+		// Si estamos dentro de comillas simples, mantener todo literal
+		else if (outer_quote == '\'')
 			result[j++] = str[i];
-		}
-		else if (inner_quote == '\'' && str[i] == '\'')
-		{
-			inner_quote = 0;
-			result[j++] = str[i];
-		}
+		// Si no hay comillas o estamos en comillas dobles, copiar el caracter
 		else
 			result[j++] = str[i];
 		i++;
 	}
 	result[j] = '\0';
-
-	if (j == 0)
-	{
-		free(result);
-		result = ft_strdup(str);
-	}
 
 	info->str = result;
 	return (info);

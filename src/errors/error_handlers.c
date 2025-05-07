@@ -52,7 +52,6 @@ void	print_error_number(int number)
 void	handle_command_not_found(char *cmd, t_shell *shell)
 {
 	shell->exit_status = 127;
-	print_error_prefix();
 	if (ft_strncmp(cmd, "$?", 2) == 0)
 		print_error_number(shell->exit_status);
 	else

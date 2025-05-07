@@ -42,28 +42,64 @@
  *   echo hola mundo     -> imprime: hola mundo\n
  *   echo -n hola mundo  -> imprime: hola mundo
  */
+static int is_valid_n_flag(char *arg)
+{
+	int i;
+
+	if (!arg || arg[0] != '-')
+		return (0);
+	i = 1;
+	while (arg[i])
+	{
+		if (arg[i] != 'n')
+			return (0);
+		i++;
+	}
+	return (i > 1); // Retorna 1 si hay al menos una 'n'
+}
+
 int	cmd_echo(t_shell *shell, char **args)
 {
 	int	i;
 	int	newline;
+	int	first_non_n;
 
 	(void)shell;
 	newline = 1;
 	i = 1;
+	first_non_n = 1;
 
-	if (args[1] && ft_strncmp(args[1], "-n", 3) == 0)
+	// Procesar todas las opciones -n al inicio
+	while (args[i])
 	{
+		if (!is_valid_n_flag(args[i]))
+		{
+			first_non_n = i;
+			break;
+		}
 		newline = 0;
 		i++;
 	}
 
+	// Imprimir argumentos
+	i = first_non_n;
 	while (args[i])
 	{
-		ft_putstr_fd(args[i], 1);
+		t_quote_info *info = remove_quotes(args[i]);
+		if (!info)
+			return (1);
+
+		if (info->str)
+			write(1, info->str, ft_strlen(info->str));
+
+		free(info->str);
+		free(info);
+
 		if (args[i + 1])
-			ft_putchar_fd(' ', 1);
+			write(1, " ", 1);
 		i++;
 	}
+
 	/* Añade salto de línea si no se usó la opción -n */
 	if (newline)
 		ft_putchar_fd('\n', 1);

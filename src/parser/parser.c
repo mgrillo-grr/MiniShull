@@ -112,14 +112,14 @@ static int	add_redirection(t_cmd *cmd, char **tokens, int *i)
 	else if (ft_strcmp(tokens[*i], "<<") == 0)
 		redir->type = 4;
 
-	(*i)++;
-	if (!tokens[*i])
+	// Verificar que hay un archivo después del redirector
+	if (!tokens[*i + 1])
 	{
 		free(redir);
 		return (0);
 	}
 
-	redir->file = ft_strdup(tokens[*i]);
+	redir->file = ft_strdup(tokens[*i + 1]);
 	redir->next = NULL;
 
 	if (!cmd->redirs)
@@ -225,15 +225,29 @@ t_cmd	*parse_input(char *input, t_shell *shell)
 				free_cmd(cmd_list);
 				return (NULL);
 			}
+			// Avanzar al siguiente token después de la redirección
+			i++;
+			continue;
 		}
 		else
 		{
 			// Primero expandir las variables si no está entre comillas simples
 			char *expanded = NULL;
-			if (tokens[i][0] == '\'' || 
-				(tokens[i][0] != '"' && !ft_strchr(tokens[i], '$')))
+			int has_valid_var = 0;
+			int k = 0;
+			while (tokens[i][k])
 			{
-				// Si empieza con comilla simple o no tiene variables, no expandir
+				if (tokens[i][k] == '$' && tokens[i][k + 1] &&
+					(ft_isalpha(tokens[i][k + 1]) || tokens[i][k + 1] == '_' || tokens[i][k + 1] == '?'))
+				{
+					has_valid_var = 1;
+					break;
+				}
+				k++;
+			}
+			if (tokens[i][0] == '\'' || !has_valid_var)
+			{
+				// Si empieza con comilla simple o no tiene variables válidas, no expandir
 				expanded = ft_strdup(tokens[i]);
 			}
 			else
@@ -249,11 +263,10 @@ t_cmd	*parse_input(char *input, t_shell *shell)
 				return (NULL);
 			}
 
-			// Luego procesar las comillas
-			t_quote_info *info = remove_quotes(expanded);
-			free(expanded);
+			// No procesamos las comillas aquí, lo haremos en cmd_echo
+			char *processed = expanded;
 
-			if (!info)
+			if (!processed)
 			{
 				free_array(tokens);
 				free_cmd(cmd_list);
@@ -263,8 +276,7 @@ t_cmd	*parse_input(char *input, t_shell *shell)
 			char **new_args = malloc(sizeof(char *) * (arg_count + 2));
 			if (!new_args)
 			{
-				free(info->str);
-				free(info);
+				free(processed);
 				free_array(tokens);
 				free_cmd(cmd_list);
 				return (NULL);
@@ -274,7 +286,7 @@ t_cmd	*parse_input(char *input, t_shell *shell)
 			for (j = 0; j < arg_count; j++)
 				new_args[j] = args[j];
 
-			new_args[arg_count] = info->str;
+			new_args[arg_count] = processed;
 			new_args[arg_count + 1] = NULL;
 			arg_count++;
 
@@ -282,7 +294,6 @@ t_cmd	*parse_input(char *input, t_shell *shell)
 				free(args);
 			args = new_args;
 			current->args = args;
-			free(info);
 		}
 		i++;
 	}

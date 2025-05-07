@@ -42,18 +42,36 @@ static int	get_token_length(char *str, int start)
 {
 	int	len;
 	char	quote;
+	int	word_start;
 
 	len = 0;
 	quote = 0;
+	word_start = 1;
+
+	if (is_special_char(str[start]))
+		return (1);
+
 	while (str[start + len])
 	{
-		if (!quote && (str[start + len] == '\'' || str[start + len] == '"'))
+		// Si encontramos una comilla al inicio de la palabra
+		if (word_start && (str[start + len] == '\'' || str[start + len] == '"'))
+		{
 			quote = str[start + len];
+			word_start = 0;
+		}
+		// Si encontramos una comilla que cierra
 		else if (quote && str[start + len] == quote)
+		{
 			quote = 0;
+			word_start = 1;
+		}
+		// Si no estamos en comillas y encontramos un delimitador
 		else if (!quote && (is_special_char(str[start + len]) ||
 			str[start + len] == ' ' || str[start + len] == '\t'))
 			break;
+		// En cualquier otro caso, no es inicio de palabra
+		else
+			word_start = 0;
 		len++;
 	}
 	return (len);

@@ -165,8 +165,6 @@ int	main(int argc, char **argv, char **envp)
 				if (cmd_name)
 				{
 					shell.exit_status = execute_cmd(&shell);
-					if (shell.exit_status == 127)
-						handle_command_not_found(cmd_name, &shell);
 					free(cmd_name);
 				}
 			}

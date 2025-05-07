@@ -108,27 +108,71 @@ static char	*expand_env_vars(char *str, t_env *env)
 			i++;
 			continue;
 		}
-		if (result[i] == '$' && result[i + 1] && 
-			result[i + 1] != '?' && result[i + 1] != ' ')
+		if (result[i] == '$')
 		{
-			j = i + 1;
-			while (result[j] && (ft_isalnum(result[j]) || result[j] == '_'))
-				j++;
-			key = ft_substr(result, i + 1, j - i - 1);
-			value = get_env_value(env, key);
-			if (value)
+			// Si es el último carácter o seguido de caracteres no válidos, mantener el $
+			if (!result[i + 1] || (!ft_isalnum(result[i + 1]) && result[i + 1] != '_' && 
+				result[i + 1] != '?' && result[i + 1] != '$'))
+			{
+				i++;
+				continue;
+			}
+			// Si es doble $, saltar uno
+			if (result[i + 1] == '$')
 			{
 				char *before = ft_substr(result, 0, i);
+				char *after = ft_strdup(result + i + 1);
+				free(result);
+				result = ft_strjoin(before, after);
+				free(before);
+				free(after);
+				continue;
+			}
+			// Si es una variable válida, expandirla
+			if (result[i + 1] && result[i + 1] != '?' && result[i + 1] != ' ')
+			{
+				j = i + 1;
+				while (result[j] && (ft_isalnum(result[j]) || result[j] == '_'))
+					j++;
+				key = ft_substr(result, i + 1, j - i - 1);
+				value = get_env_value(env, key);
+				char *before = ft_substr(result, 0, i);
 				char *after = ft_strdup(result + j);
-				char *temp = ft_strjoin(before, value);
+				char *temp;
+
+				// Si estamos en comillas simples, mantener el $variable
+				if (quote == '\'')
+				{
+					char *var_name = ft_substr(result, i, j - i);
+					temp = ft_strjoin(before, var_name);
+					free(var_name);
+				}
+				// Si la variable existe, usar su valor
+				else if (value)
+					temp = ft_strjoin(before, value);
+				// Si la variable no existe y estamos en comillas dobles, mantener solo el nombre
+				else if (quote == '"')
+					temp = ft_strdup(before);
+				// Si la variable no existe y no estamos en comillas, usar cadena vacía
+				else
+					temp = ft_strdup(before);
+
 				free(result);
 				result = ft_strjoin(temp, after);
 				free(before);
 				free(after);
 				free(temp);
-				i += ft_strlen(value) - 1;
+
+				// Actualizar el índice según el caso
+				if (quote == '\'')
+					i += j - i - 1;
+				else if (value)
+					i += ft_strlen(value) - 1;
+				else
+					i--; // Para variables no existentes, retroceder uno para compensar el i++ del bucle
+
+				free(key);
 			}
-			free(key);
 		}
 		else
 			i++;

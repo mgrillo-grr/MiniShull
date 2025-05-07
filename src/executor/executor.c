@@ -32,32 +32,57 @@ char	*find_command_path(char *cmd, t_env *env)
 	char	*full_path;
 	int		i;
 	struct stat	st;
+	t_quote_info *info;
+	char	*processed_cmd;
 
 	if (!cmd || !*cmd)
 		return (NULL);
-	if (cmd[0] == '/' || cmd[0] == '.')
+
+	// Procesar las comillas del comando
+	info = remove_quotes(cmd);
+	if (!info)
+		return (NULL);
+	processed_cmd = info->str;
+
+	if (processed_cmd[0] == '/' || processed_cmd[0] == '.')
 	{
-		if (stat(cmd, &st) == 0 && (st.st_mode & S_IXUSR))
-			return (ft_strdup(cmd));
+		if (stat(processed_cmd, &st) == 0 && (st.st_mode & S_IXUSR))
+		{
+			free(info);
+			return (ft_strdup(processed_cmd));
+		}
+		free(info->str);
+		free(info);
 		return (NULL);
 	}
+
 	path = get_env_value(env, "PATH");
 	if (!path)
+	{
+		free(info->str);
+		free(info);
 		return (NULL);
+	}
+
 	paths = ft_split(path, ':');
 	i = 0;
 	while (paths[i])
 	{
-		full_path = ft_strjoin(ft_strjoin(paths[i], "/"), cmd);
+		full_path = ft_strjoin(ft_strjoin(paths[i], "/"), processed_cmd);
 		if (stat(full_path, &st) == 0 && (st.st_mode & S_IXUSR))
 		{
 			free(paths);
+			free(info->str);
+			free(info);
 			return (full_path);
 		}
 		free(full_path);
 		i++;
 	}
+
 	free(paths);
+	free(info->str);
+	free(info);
 	return (NULL);
 }
 
@@ -81,6 +106,9 @@ static int	execute_external(t_cmd *cmd, t_shell *shell)
 	char	**envp;
 	pid_t	pid;
 	int		status;
+	int		i;
+	char	**processed_args;
+	t_quote_info	*info;
 
 	if (!cmd || !cmd->args || !cmd->args[0])
 		return (1);
@@ -88,12 +116,36 @@ static int	execute_external(t_cmd *cmd, t_shell *shell)
 	cmd_path = find_command_path(cmd->args[0], shell->env);
 	if (!cmd_path)
 	{
-		if (!cmd->redirs && !cmd->next)
-			return (127);
-		ft_putstr_fd(cmd->args[0], 2);
-		ft_putendl_fd(": command not found", 2);
+		shell->exit_status = 127;
 		return (127);
 	}
+
+	// Procesar las comillas de los argumentos
+	i = 0;
+	while (cmd->args[i])
+		i++;
+	processed_args = malloc(sizeof(char *) * (i + 1));
+	if (!processed_args)
+	{
+		free(cmd_path);
+		return (1);
+	}
+
+	i = 0;
+	while (cmd->args[i])
+	{
+		info = remove_quotes(cmd->args[i]);
+		if (!info)
+		{
+			free(cmd_path);
+			free_array(processed_args);
+			return (1);
+		}
+		processed_args[i] = info->str;
+		free(info);
+		i++;
+	}
+	processed_args[i] = NULL;
 
 	pid = fork();
 	if (pid == 0)
@@ -101,11 +153,12 @@ static int	execute_external(t_cmd *cmd, t_shell *shell)
 		if (cmd->redirs && apply_redirections(cmd, shell))
 			exit(1);
 		envp = env_to_array(shell->env);
-		execve(cmd_path, cmd->args, envp);
+		execve(cmd_path, processed_args, envp);
 		perror("minishell");
 		exit(126);
 	}
 	free(cmd_path);
+	free_array(processed_args);
 	waitpid(pid, &status, 0);
 	if (WIFEXITED(status))
 		return (WEXITSTATUS(status));
@@ -158,5 +211,8 @@ int	execute_cmd(t_shell *shell)
 	if (shell->cmd->next)
 		return (execute_piped_commands(shell->cmd, shell));
 
-	return (execute_external(shell->cmd, shell));
+	ret = execute_external(shell->cmd, shell);
+	if (ret == 127)
+		handle_command_not_found(shell->cmd->args[0], shell);
+	return (ret);
 }
