@@ -56,8 +56,8 @@ static char	*expand_exit_status(char *str, t_shell *shell)
 
 			free(before);
 			free(after);
-			free(exit_str);
 			i += ft_strlen(exit_str) - 1;
+			free(exit_str);
 		}
 		i++;
 	}

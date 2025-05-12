@@ -80,6 +80,8 @@ typedef struct s_quote_info
 // Funciones de manejo de quotes
 t_quote_info	*remove_quotes(char *str);
 
+
+// t_env será la cabeza de la lista enlazada
 typedef struct s_env
 {
     char            *key;

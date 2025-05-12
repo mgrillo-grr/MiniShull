@@ -1,0 +1,45 @@
+
+e"c"ho 
+# linea vacia
+
+echo 
+# linea vacia
+
+e"c"ho -n
+# linea vacia sin salto de linea
+
+echo -n
+# linea vacia sin salto de liena
+
+echo -nnnnnn -nnnnnnn -nnnnnn hola
+hola # sin salto de linea
+
+e"c"ho -n -nnn -nnn -nnn ''
+# linea vacia sin salto de liena
+
+e"c"ho -nnnnnn -nnnnnnn -nnnnnn hola
+hola # sin salto de linea
+
+echo ''
+# línea vacía
+
+echo ""
+# línea vacía
+
+e"c"ho ""
+# línea vacía
+
+e"c"ho ''
+# línea vacía
+
+e"c"ho "$USER"
+mgrillo           # expande la variable
+
+e"c"ho '"$USER"'
+"$USER"           # mantiene el texto literal
+
+e"c"ho "$uasgasg"
+                  # línea vacía porque la variable no existe
+
+e"c"ho '"$uasgasg"'
+"$uasgasg"        # mantiene el texto literal

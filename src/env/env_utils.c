@@ -34,29 +34,39 @@
  */
 t_env	*init_env(char **envp)
 {
-	t_env	*env;
-	t_env	*new;
-	char	*key;
-	char	*value;
-	int		i;
+	t_env	*env; /* cabeza de la lista enlazada, Cuando empecemos a agregar nodos, env se irá actualizando para siempre apuntar al nodo más recientemente añadido */
+	t_env	*new; /* Se usa para crear un nuevo nodo en cada iteración del bucle*/  /*cada vuelta del while, se reserva memoria con malloc para un nuevo t_env. Se llena ese nodo (key, value, next) y luego se enlaza a la lista usando env.*/
+	char	*key; /* Es un puntero a una cadena de caracteres. Se usa para almacenar la parte izquierda de una variable de entorno, es decir, el nombre de la variable. */
+	char	*value; /* Es otro puntero a cadena (char *), que se usa para guardar el valor asociado a la variable de entorno, o sea, la parte derecha después del '='. */
+	int		i; /* Se utiliza para recorrer el array */
 
 	env = NULL;
 	i = 0;
 	while (envp[i])
 	{
-		key = ft_substr(envp[i], 0, ft_strchr(envp[i], '=') - envp[i]);
-		value = ft_strdup(ft_strchr(envp[i], '=') + 1);
+		key = ft_substr(envp[i], 0, ft_strchr(envp[i], '=') - envp[i]); /* Busca el carácter '=' dentro de la cadena de entorno (como "PATH=/usr/bin"). Calcula cuántos caracteres hay antes del '='. Extrae esa parte (por ejemplo, "PATH") y la guarda en key. */
+		value = ft_strdup(ft_strchr(envp[i], '=') + 1);  /* ft_strchr(envp[i], '=') → Encuentra el puntero al primer '=' en la cadena (ej: "PATH=/usr/bin" → apunta al '='). + 1 → Avanza un carácter, quedándose con el valor (salta el '=' y queda "usr/bin"). ft_strdup(...) → Duplica esa subcadena, reservando memoria nueva para guardarla en value */
 		new = malloc(sizeof(t_env));
 		if (!new)
 			return (NULL);
-		new->key = key;
-		new->value = value;
-		new->next = env;
-		env = new;
+		new->key = key; /* Guarda el nombre de la variable (por ejemplo "PATH") en el nodo new. */
+		new->value = value; /* Guarda el valor asociado (por ejemplo "/usr/bin") en el mismo nodo. */
+		new->next = env; /* Enlaza el nuevo nodo al principio de la lista. El puntero next de new apunta al nodo que antes era el primero. Así, el nuevo nodo queda insertado al inicio de la lista. */
+		env = new; /* env siempre debe apuntar a la cabeza de la lista enlazada. Cada vez que agregás un nuevo nodo al inicio (con new->next = env), ese nuevo nodo pasa a ser la nueva cabeza. Entonces, env = new actualiza la cabeza de la lista. */
 		i++;
 	}
 	return (env);
 }
+// envp[0] = "USER=juan"
+// envp[1] = "HOME=/home/juan"
+// envp[2] = "PATH=/usr/bin"
+
+// ┌────────────┐     ┌────────────┐     ┌────────────┐
+// │ "PATH"     │     │ "HOME"     │     │ "USER"     │
+// │ "/usr/bin" │     │ "/home/juan"│    │ "juan"     │
+// │ next ──────┼────▶│ next ──────┼────▶│ next = NULL│
+// └────────────┘     └────────────┘     └────────────┘
+
 
 /*
  * Función: free_env
