@@ -55,34 +55,24 @@ static int is_valid_n_flag(char *arg)
 			return (0);
 		i++;
 	}
-	return (i > 1); // Retorna 1 si hay al menos una 'n'
+	return (i > 1);
 }
 
 int	cmd_echo(t_shell *shell, char **args)
 {
 	int	i;
 	int	newline;
-	int	first_non_n;
 
 	(void)shell;
 	newline = 1;
 	i = 1;
-	first_non_n = 1;
 
-	// Procesar todas las opciones -n al inicio
-	while (args[i])
+	while (args[i] && is_valid_n_flag(args[i]))
 	{
-		if (!is_valid_n_flag(args[i]))
-		{
-			first_non_n = i;
-			break;
-		}
 		newline = 0;
 		i++;
 	}
 
-	// Imprimir argumentos
-	i = first_non_n;
 	while (args[i])
 	{
 		t_quote_info *info = remove_quotes(args[i]);
@@ -100,7 +90,6 @@ int	cmd_echo(t_shell *shell, char **args)
 		i++;
 	}
 
-	/* Añade salto de línea si no se usó la opción -n */
 	if (newline)
 		ft_putchar_fd('\n', 1);
 	return (0);
