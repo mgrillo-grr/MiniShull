@@ -131,6 +131,7 @@ int	execute_cmd_in_child(t_cmd *cmd, t_shell *shell)
 {
 	char	*cmd_path;
 	char	**envp;
+	t_quote_info *info;
 
 	if (!cmd || !cmd->args || !cmd->args[0])
 		exit(1);
@@ -138,11 +139,17 @@ int	execute_cmd_in_child(t_cmd *cmd, t_shell *shell)
 	if (is_builtin(cmd->args[0]))
 		exit(execute_builtin(cmd, shell));
 
-	cmd_path = find_command_path(cmd->args[0], shell->env);
+	info = remove_quotes(cmd->args[0]);
+	if (!info)
+	{
+		exit(127);
+	}
+	cmd_path = find_command_path(info->str, shell->env);
+	free(info->str);
+	free(info);
 	if (!cmd_path)
 	{
-		ft_putstr_fd(cmd->args[0], 2);
-		ft_putendl_fd(": command not found", 2);
+		handle_command_not_found(cmd->args[0], shell);
 		exit(127);
 	}
 

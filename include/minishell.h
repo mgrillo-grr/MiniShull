@@ -156,7 +156,7 @@ void    reset_signals(void);
 // Error handlers
 void	print_error_prefix(void);
 void	print_error_number(int number);
-void	handle_command_not_found(char *cmd, t_shell *shell);
+extern void	handle_command_not_found(char *cmd, t_shell *shell);
 void	handle_unclosed_quotes(t_shell *shell);
 
 // Utils

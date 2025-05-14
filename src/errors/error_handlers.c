@@ -40,6 +40,28 @@ void	print_error_number(int number)
 }
 
 /*
+ * Función: print_command_not_found
+ * -------------------------------
+ * Imprime el mensaje de comando no encontrado procesando las comillas.
+ *
+ * Parámetros:
+ *   cmd: Nombre del comando no encontrado
+ */
+static void	print_command_not_found(char *cmd)
+{
+	t_quote_info *info = remove_quotes(cmd);
+	if (info)
+	{
+		ft_putstr_fd(info->str, 2);
+		free(info->str);
+		free(info);
+	}
+	else
+		ft_putstr_fd(cmd, 2);
+	ft_putendl_fd(ERR_NOT_FOUND, 2);
+}
+
+/*
  * Función: handle_command_not_found
  * -------------------------------
  * Maneja el caso de comando no encontrado, actualizando el estado de salida
@@ -55,8 +77,7 @@ void	handle_command_not_found(char *cmd, t_shell *shell)
 	if (ft_strncmp(cmd, "$?", 2) == 0)
 		print_error_number(shell->exit_status);
 	else
-		ft_putstr_fd(cmd, 2);
-	ft_putendl_fd(ERR_NOT_FOUND, 2);
+		print_command_not_found(cmd);
 }
 
 /*
