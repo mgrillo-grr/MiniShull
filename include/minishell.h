@@ -28,6 +28,8 @@
 # include <readline/readline.h>
 # include <readline/history.h>
 # include <errno.h>
+# include "executor.h"
+# include "pipes.h"
 
 # define MAX_PATH_LEN 4096
 # define HOST_NAME_MAX 64
@@ -65,7 +67,7 @@
 # define COLOR_GRAY "\001\033[1;90m\002"
 # define COLOR_LIGHT_CYAN "\001\033[1;96m\002"
 
-# define PROMPT COLOR_GRAY"╭─"COLOR_LIGHT_CYAN"%s@%s:%s"COLOR_RESET"\n"COLOR_GRAY"╰─"COLOR_RESET"%sminishell"COLOR_RESET"$ "
+# define PROMPT COLOR_LIGHT_CYAN"%s@%s:%s"COLOR_RESET"$ "
 
 /* Variable global para manejar señales */
 extern int	g_signal_received;
@@ -144,13 +146,15 @@ char    *get_next_line(int fd);
 int     execute_cmd(t_shell *shell);
 int     execute_builtin(t_cmd *cmd, t_shell *shell);
 int     apply_redirections(t_cmd *cmd, t_shell *shell);
-int     is_builtin(char *cmd);
+int     is_builtin(const char *cmd);
 int     execute_cmd_in_child(t_cmd *cmd, t_shell *shell);
 int     execute_piped_commands(t_cmd *cmd, t_shell *shell);
 char    *find_command_path(char *cmd, t_env *env);
 
 // Signal handlers
 void    setup_signals(void);
+void    setup_heredoc_signals(void);
+void    setup_child_signals(void);
 void    reset_signals(void);
 
 // Error handlers
@@ -158,6 +162,7 @@ void	print_error_prefix(void);
 void	print_error_number(int number);
 extern void	handle_command_not_found(char *cmd, t_shell *shell);
 void	handle_unclosed_quotes(t_shell *shell);
+char	*expand_env_vars(char *str, t_env *env);
 
 // Utils
 void    error_msg(char *msg);

@@ -5,214 +5,124 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: mgrillo <mgrillo@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/04/30 15:29:56 by mgrillo           #+#    #+#             */
-/*   Updated: 2025/04/30 15:29:56 by mgrillo          ###   ########.fr       */
+/*   Created: 2025/05/27 16:21:20 by mgrillo           #+#    #+#             */
+/*   Updated: 2025/05/28 12:10:00 by mgrillo          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "minishell.h"
+#include "executor.h"
 
 /*
- * Función: find_command_path
- * ----------------------
- * Busca la ruta completa de un comando en el PATH.
+ * Function: has_input_redirection
+ * -----------------------------
+ * Checks if there's any input redirection in the command.
  *
- * Parámetros:
- *   cmd: Nombre del comando
- *   env: Variables de entorno
+ * Parameters:
+ *   redirs: List of redirections
  *
- * Retorna:
- *   La ruta completa del comando si se encuentra
- *   NULL si no se encuentra
+ * Returns:
+ *   1 if there's an input redirection, 0 otherwise
  */
-char	*find_command_path(char *cmd, t_env *env)
+static int	has_input_redirection(t_redir *redirs)
 {
-	char	*path;
-	char	**paths;
-	char	*full_path;
-	int		i;
-	struct stat	st;
-	t_quote_info *info;
-	char	*processed_cmd;
+	t_redir	*current;
 
-	if (!cmd || !*cmd)
-		return (NULL);
-
-	// Procesar las comillas del comando
-	info = remove_quotes(cmd);
-	if (!info)
-		return (NULL);
-	processed_cmd = info->str;
-
-	if (processed_cmd[0] == '/' || processed_cmd[0] == '.')
+	current = redirs;
+	while (current)
 	{
-		if (stat(processed_cmd, &st) == 0 && (st.st_mode & S_IXUSR))
-		{
-			free(info);
-			return (ft_strdup(processed_cmd));
-		}
-		free(info->str);
-		free(info);
-		return (NULL);
+		if (current->type == 1 || current->type == 4) // Input or heredoc
+			return (1);
+		current = current->next;
 	}
-
-	path = get_env_value(env, "PATH");
-	if (!path)
-	{
-		free(info->str);
-		free(info);
-		return (NULL);
-	}
-
-	paths = ft_split(path, ':');
-	i = 0;
-	while (paths[i])
-	{
-		full_path = ft_strjoin(ft_strjoin(paths[i], "/"), processed_cmd);
-		if (stat(full_path, &st) == 0 && (st.st_mode & S_IXUSR))
-		{
-			free(paths);
-			free(info->str);
-			free(info);
-			return (full_path);
-		}
-		free(full_path);
-		i++;
-	}
-
-	free(paths);
-	free(info->str);
-	free(info);
-	return (NULL);
+	return (0);
 }
 
 /*
- * Función: execute_external
- * -----------------------
- * Ejecuta un comando externo.
+ * Function: execute_cmd
+ * ------------------
+ * Executes a command, either builtin or external.
  *
- * Parámetros:
- *   cmd: Estructura del comando a ejecutar
- *   shell: Estructura principal del shell
+ * Parameters:
+ *   shell: Main shell structure
  *
- * Retorna:
- *   El código de salida del comando
- *   127 si el comando no se encuentra
- *   126 si hay un error de permisos
+ * Process:
+ * 1. Checks if there's a command to execute
+ * 2. If it's a builtin, executes it directly
+ * 3. If it's not a builtin, executes it as an external command
+ *
+ * Returns:
+ *   Exit code of the executed command
  */
-static int	execute_external(t_cmd *cmd, t_shell *shell)
+static int	handle_dup_errors(int saved_stdin, int saved_stdout)
 {
-	char	*cmd_path;
-	char	**envp;
-	pid_t	pid;
-	int		status;
-	int		i;
-	char	**processed_args;
-	t_quote_info	*info;
-
-	if (!cmd || !cmd->args || !cmd->args[0])
-		return (1);
-
-	cmd_path = find_command_path(cmd->args[0], shell->env);
-	if (!cmd_path)
-	{
-		shell->exit_status = 127;
-		return (127);
-	}
-
-	// Procesar las comillas de los argumentos
-	i = 0;
-	while (cmd->args[i])
-		i++;
-	processed_args = malloc(sizeof(char *) * (i + 1));
-	if (!processed_args)
-	{
-		free(cmd_path);
-		return (1);
-	}
-
-	i = 0;
-	while (cmd->args[i])
-	{
-		info = remove_quotes(cmd->args[i]);
-		if (!info)
-		{
-			free(cmd_path);
-			free_array(processed_args);
-			return (1);
-		}
-		processed_args[i] = info->str;
-		free(info);
-		i++;
-	}
-	processed_args[i] = NULL;
-
-	pid = fork();
-	if (pid == 0)
-	{
-		if (cmd->redirs && apply_redirections(cmd, shell))
-			exit(1);
-		envp = env_to_array(shell->env);
-		execve(cmd_path, processed_args, envp);
-		perror("minishell");
-		exit(126);
-	}
-	free(cmd_path);
-	free_array(processed_args);
-	waitpid(pid, &status, 0);
-	if (WIFEXITED(status))
-		return (WEXITSTATUS(status));
+	if (saved_stdin != -1)
+		close(saved_stdin);
+	if (saved_stdout != -1)
+		close(saved_stdout);
 	return (1);
 }
 
-/*
- * Función: execute_cmd
- * ------------------
- * Ejecuta un comando, ya sea builtin o externo.
- *
- * Parámetros:
- *   shell: Estructura principal del shell
- *
- * Proceso:
- * 1. Verifica si hay un comando para ejecutar
- * 2. Si es un builtin, lo ejecuta directamente
- * 3. Si no es builtin, lo ejecuta como comando externo
- *
- * Retorna:
- *   El código de salida del comando ejecutado
- */
+static int	handle_redirections(t_shell *shell,
+				int saved_stdin, int saved_stdout)
+{
+	if (shell->cmd->redirs)
+	{
+		if (apply_redirections(shell->cmd, shell))
+		{
+			restore_file_descriptors(saved_stdin, saved_stdout);
+			return (1);
+		}
+		// If there's no command, just process the redirections
+		if (!shell->cmd->args || !shell->cmd->args[0])
+		{
+			// For input redirections, we need to read from the file
+			// but don't execute any command
+			if (has_input_redirection(shell->cmd->redirs))
+			{
+				// Just read from stdin (which is now the file)
+				char buffer[1024];
+				while (read(STDIN_FILENO, buffer, sizeof(buffer)) > 0)
+					;
+			}
+			restore_file_descriptors(saved_stdin, saved_stdout);
+			return (0);
+		}
+	}
+	return (-1);
+}
+
+static int	execute_command_logic(t_shell *shell)
+{
+	// If there are redirections but no command, just process the redirections and exit
+	if (shell->cmd->redirs && (!shell->cmd->args || !shell->cmd->args[0]))
+	{
+		// Apply redirections and exit with success
+		if (apply_redirections(shell->cmd, shell) == 0)
+			return (0);
+		return (1);
+	}
+	if (!shell->cmd->next)
+		return (execute_single_command(shell->cmd, shell));
+	return (execute_piped_commands(shell->cmd, shell));
+}
+
 int	execute_cmd(t_shell *shell)
 {
-	int	ret;
 	int	saved_stdin;
 	int	saved_stdout;
+	int	ret;
 
-	if (!shell || !shell->cmd || !shell->cmd->args || !shell->cmd->args[0])
+	if (!shell || !shell->cmd)
 		return (1);
-
-	if (!shell->cmd->next && is_builtin(shell->cmd->args[0]))
-	{
-		saved_stdin = dup(0);
-		saved_stdout = dup(1);
-
-		if (shell->cmd->redirs && apply_redirections(shell->cmd, shell))
-			return (1);
-
-		ret = execute_builtin(shell->cmd, shell);
-
-		dup2(saved_stdin, 0);
-		dup2(saved_stdout, 1);
-		close(saved_stdin);
-		close(saved_stdout);
-
+	saved_stdin = dup(0);
+	saved_stdout = dup(1);
+	if (saved_stdin == -1 || saved_stdout == -1)
+		return (handle_dup_errors(saved_stdin, saved_stdout));
+	ret = handle_redirections(shell, saved_stdin, saved_stdout);
+	if (ret != -1)
 		return (ret);
-	}
-
-	if (shell->cmd->next)
-		return (execute_piped_commands(shell->cmd, shell));
-
-	ret = execute_external(shell->cmd, shell);
-	if (ret == 127)
-		handle_command_not_found(shell->cmd->args[0], shell);
+	ret = execute_command_logic(shell);
+	restore_file_descriptors(saved_stdin, saved_stdout);
 	return (ret);
 }

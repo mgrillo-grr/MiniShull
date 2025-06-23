@@ -6,16 +6,16 @@
 /*   By: mgrillo <mgrillo@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/30 15:29:56 by mgrillo           #+#    #+#             */
-/*   Updated: 2025/04/30 15:29:56 by mgrillo          ###   ########.fr       */
+/*   Updated: 2025/05/27 15:42:34 by mgrillo          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "minishell.h"
+#include "builtin_utils.h"
 
 /*
  * Función: is_builtin
  * ------------------
- * Verifica si un comando es un builtin del shell.
+ * Verifica si un comando es un builtin.
  *
  * Parámetros:
  *   cmd: Nombre del comando a verificar
@@ -24,18 +24,23 @@
  *   1 si el comando es un builtin
  *   0 si no lo es
  */
-int	is_builtin(char *cmd)
+int	is_builtin(const char *cmd)
 {
+	const t_builtin	*builtins;
+	size_t			i;
+
 	if (!cmd)
 		return (0);
-	return (!ft_strncmp(cmd, "echo", 5) ||
-			!ft_strncmp(cmd, "cd", 3) ||
-			!ft_strncmp(cmd, "pwd", 4) ||
-			!ft_strncmp(cmd, "export", 7) ||
-			!ft_strncmp(cmd, "unset", 6) ||
-			!ft_strncmp(cmd, "env", 4) ||
-			!ft_strncmp(cmd, "exit", 5) ||
-			!ft_strncmp(cmd, "history", 8));
+	builtins = get_builtins();
+	i = 0;
+	while (i < get_builtins_count())
+	{
+		if (ft_strncmp(cmd, builtins[i].name,
+				ft_strlen(builtins[i].name) + 1) == 0)
+			return (1);
+		i++;
+	}
+	return (0);
 }
 
 /*
@@ -53,26 +58,19 @@ int	is_builtin(char *cmd)
  */
 int	execute_builtin(t_cmd *cmd, t_shell *shell)
 {
-	char	*command;
+	const t_builtin	*builtins;
+	size_t			i;
 
 	if (!cmd || !cmd->args || !cmd->args[0])
 		return (-1);
-	command = cmd->args[0];
-	if (!ft_strncmp(command, "echo", 5))
-		return (cmd_echo(shell, cmd->args));
-	if (!ft_strncmp(command, "cd", 3))
-		return (cmd_cd(shell, cmd->args));
-	if (!ft_strncmp(command, "pwd", 4))
-		return (cmd_pwd(shell, cmd->args));
-	if (!ft_strncmp(command, "export", 7))
-		return (cmd_export(shell, cmd->args));
-	if (!ft_strncmp(command, "unset", 6))
-		return (cmd_unset(shell, cmd->args));
-	if (!ft_strncmp(command, "env", 4))
-		return (cmd_env(shell, cmd->args));
-	if (!ft_strncmp(command, "exit", 5))
-		return (cmd_exit(shell, cmd->args));
-	if (!ft_strncmp(command, "history", 8))
-		return (cmd_history(shell, cmd->args));
+	builtins = get_builtins();
+	i = 0;
+	while (i < get_builtins_count())
+	{
+		if (ft_strncmp(cmd->args[0], builtins[i].name,
+				ft_strlen(builtins[i].name) + 1) == 0)
+			return (builtins[i].func(shell, cmd->args));
+		i++;
+	}
 	return (-1);
 }

@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "minishell.h"
+#include "expander.h"
 
 /*
  * Función: expand_exit_status
@@ -30,13 +31,17 @@ static char	*expand_exit_status(char *str, t_shell *shell)
 	char	*exit_str;
 	char	*before;
 	char	*after;
+	char	*tmp;
 	int		i;
 	char	quote;
 
 	result = ft_strdup(str);
+	if (!result)
+		return (NULL);
+
 	i = 0;
 	quote = 0;
-	while (result[i])
+	while (result && result[i])
 	{
 		if (result[i] == '\'' && !quote)
 			quote = '\'';
@@ -50,14 +55,35 @@ static char	*expand_exit_status(char *str, t_shell *shell)
 			after = ft_strdup(result + i + 2);
 			exit_str = ft_itoa(shell->exit_status);
 
+			if (!before || !after || !exit_str)
+			{
+				free(before);
+				free(after);
+				free(exit_str);
+				free(result);
+				return (NULL);
+			}
+
 			free(result);
 			result = ft_strjoin(before, exit_str);
-			result = ft_strjoin(result, after);
-
 			free(before);
-			free(after);
-			i += ft_strlen(exit_str) - 1;
 			free(exit_str);
+
+			if (!result)
+			{
+				free(after);
+				return (NULL);
+			}
+
+			tmp = result;
+			result = ft_strjoin(result, after);
+			free(tmp);
+			free(after);
+
+			if (!result)
+				return (NULL);
+
+			i = ft_strlen(result) - 1;
 		}
 		i++;
 	}
@@ -77,7 +103,7 @@ static char	*expand_exit_status(char *str, t_shell *shell)
  * Retorna:
  *   Un nuevo string con las variables expandidas
  */
-static char	*expand_env_vars(char *str, t_env *env)
+char	*expand_env_vars(char *str, t_env *env)
 {
 	char	*result;
 	char	*value;

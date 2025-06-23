@@ -5,116 +5,91 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: mgrillo <mgrillo@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/04/30 15:29:56 by mgrillo           #+#    #+#             */
-/*   Updated: 2025/04/30 15:29:56 by mgrillo          ###   ########.fr       */
+/*   Created: 2025/05/28 13:00:00 by mgrillo           #+#    #+#             */
+/*   Updated: 2025/05/28 15:45:00 by mgrillo          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "minishell.h"
+#include "redirections.h"
+#include "expander.h"
+#include "redir_utils.h"
 
-static int	open_input_file(char *filename)
+static int	handle_redirection(t_redir *redir, t_shell *shell, int *error)
 {
-	int	fd;
-
-	fd = open(filename, O_RDONLY);
-	if (fd == -1)
+	if (redir->type == 1 || redir->type == 4)
 	{
-		ft_putstr_fd(filename, 2);
-		ft_putendl_fd(ERR_NO_FILE, 2);
-		return (-1);
+		if (!handle_input_redir(redir, shell, error))
+			return (0);
 	}
-	return (fd);
+	else if (redir->type == 2 || redir->type == 3)
+	{
+		if (!handle_output_redir(redir, error))
+			return (0);
+	}
+	return (1);
 }
 
-static int	open_output_file(char *filename, int append)
+static int	setup_redirections(t_cmd *cmd, t_shell *shell, int *error)
 {
-	int	fd;
-	int	flags;
+	t_redir	*redir;
 
-	flags = O_WRONLY | O_CREAT;
-	if (append)
-		flags |= O_APPEND;
-	else
-		flags |= O_TRUNC;
-
-	fd = open(filename, flags, 0644);
-	if (fd == -1)
+	redir = cmd->redirs;
+	while (redir && !*error)
 	{
-		ft_putstr_fd(filename, 2);
-		ft_putendl_fd(ERR_NO_PERM, 2);
-		return (-1);
+		handle_redirection(redir, shell, error);
+		redir = redir->next;
 	}
-	return (fd);
+	return (*error);
 }
 
-static int	handle_heredoc(char *delimiter, t_shell *shell)
+int	has_input_redirection(t_redir *redir)
 {
-	int	pipe_fd[2];
-	char	*line;
-
-	if (pipe(pipe_fd) == -1)
-		return (-1);
-
-	shell->in_heredoc = 1;
-	while (1)
+	while (redir)
 	{
-		ft_putstr_fd("> ", 1);
-		line = get_next_line(0);
-		if (!line || (ft_strlen(line) - 1 == ft_strlen(delimiter) &&
-			ft_strncmp(line, delimiter, ft_strlen(delimiter)) == 0))
-		{
-			free(line);
-			break;
-		}
-		ft_putstr_fd(line, pipe_fd[1]);
-		free(line);
+		if (redir->type == 1 || redir->type == 4) // Input or here-doc
+			return (1);
+		redir = redir->next;
 	}
-	shell->in_heredoc = 0;
-	close(pipe_fd[1]);
-	return (pipe_fd[0]);
+	return (0);
 }
 
 int	apply_redirections(t_cmd *cmd, t_shell *shell)
 {
-	t_redir	*redir;
-	int		fd;
+	static int	saved_stdin = -1;
+	static int	saved_stdout = -1;
+	int			error;
 
-	redir = cmd->redirs;
-	while (redir)
+	// Si ya hay redirecciones aplicadas, restaurar los descriptores originales
+	if (saved_stdin != -1)
 	{
-		if (redir->type == 1) // <
-		{
-			fd = open_input_file(redir->file);
-			if (fd == -1)
-				return (1);
-			dup2(fd, 0);
-			close(fd);
-		}
-		else if (redir->type == 2) // >
-		{
-			fd = open_output_file(redir->file, 0);
-			if (fd == -1)
-				return (1);
-			dup2(fd, 1);
-			close(fd);
-		}
-		else if (redir->type == 3) // >>
-		{
-			fd = open_output_file(redir->file, 1);
-			if (fd == -1)
-				return (1);
-			dup2(fd, 1);
-			close(fd);
-		}
-		else if (redir->type == 4) // <<
-		{
-			fd = handle_heredoc(redir->file, shell);
-			if (fd == -1)
-				return (1);
-			dup2(fd, 0);
-			close(fd);
-		}
-		redir = redir->next;
+		dup2(saved_stdin, STDIN_FILENO);
+		close(saved_stdin);
+		saved_stdin = -1;
 	}
-	return (0);
+	if (saved_stdout != -1)
+	{
+		dup2(saved_stdout, STDOUT_FILENO);
+		close(saved_stdout);
+		saved_stdout = -1;
+	}
+
+	// Si no hay redirecciones que aplicar, salir
+	if (!cmd->redirs)
+		return (0);
+
+	// Guardar los descriptores originales
+	saved_stdin = dup(STDIN_FILENO);
+	saved_stdout = dup(STDOUT_FILENO);
+	if (saved_stdin == -1 || saved_stdout == -1)
+	{
+		perror("minishell: dup");
+		return (1);
+	}
+
+	// Aplicar las redirecciones
+	error = 0;
+	setup_redirections(cmd, shell, &error);
+
+	return (error);
 }

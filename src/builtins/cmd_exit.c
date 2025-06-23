@@ -11,51 +11,13 @@
 /* ************************************************************************** */
 
 #include "minishell.h"
+#include <limits.h>
 
-/*
- * Función: is_numeric
- * ------------------
- * Verifica si una cadena representa un número válido.
- *
- * Parámetros:
- *   str: Cadena a verificar
- *
- * Reglas de validación:
- * 1. Puede comenzar con un signo opcional (+ o -)
- * 2. El resto de caracteres deben ser dígitos (0-9)
- * 3. No se permiten espacios ni otros caracteres
- *
- * Ejemplos válidos:
- *   "123"   -> retorna 1
- *   "-456"  -> retorna 1
- *   "+789"  -> retorna 1
- *
- * Ejemplos inválidos:
- *   "12.3"  -> retorna 0
- *   "abc"   -> retorna 0
- *   "1a2b3" -> retorna 0
- *
- * Retorna:
- *   1: La cadena es un número válido
- *   0: La cadena no es un número válido
- */
-static int	is_numeric(char *str)
+static int	ft_isspace(int c)
 {
-	int	i;
-
-	i = 0;
-	/* Maneja el signo opcional */
-	if (str[i] == '-' || str[i] == '+')
-		i++;
-	/* Verifica que todos los caracteres sean dígitos */
-	while (str[i])
-	{
-		if (!ft_isdigit(str[i]))
-			return (0);
-		i++;
-	}
-	return (1);
+	return (c == ' ' || (c >= '\t' && c <= '\r'));
 }
+
 
 /*
  * Función: cmd_exit
@@ -94,34 +56,174 @@ static int	is_numeric(char *str)
  *   N: Valor especificado por el usuario (0-255)
  *   1: Error por demasiados argumentos (no sale)
  */
+static int	is_valid_number(const char *str)
+{
+	int	i;
+	int	has_digit;
+	int	in_quotes;
+	int	sign_pos;
+
+	i = 0;
+	has_digit = 0;
+	in_quotes = 0;
+	sign_pos = -1;
+
+	/* Skip leading spaces */
+	while (ft_isspace(str[i]))
+		i++;
+
+	/* Handle sign before quote */
+	if (str[i] == '+' || str[i] == '-')
+	{
+		sign_pos = i;
+		i++;
+	}
+
+	/* Handle opening quote */
+	if (str[i] == '\'' || str[i] == '"')
+	{
+		in_quotes = str[i];
+		i++;
+		/* If sign was before quote, it's invalid */
+		if (sign_pos != -1 && sign_pos != i - 2)
+			return (0);
+	}
+
+	/* Handle sign inside quotes */
+	if ((str[i] == '+' || str[i] == '-') && in_quotes)
+		i++;
+
+	/* Check for at least one digit */
+	if (!ft_isdigit(str[i]))
+	{
+		if (sign_pos != -1 || in_quotes)
+			return (0);
+		return (0);
+	}
+
+	/* Check remaining digits */
+	while (ft_isdigit(str[i]))
+	{
+		has_digit = 1;
+		i++;
+	}
+
+	/* If we're in quotes, skip to closing quote */
+	if (in_quotes)
+	{
+		if (str[i] != in_quotes)
+			return (0);
+		i++;
+	}
+
+	/* Skip trailing spaces */
+	while (ft_isspace(str[i]))
+		i++;
+
+	/* Check if we have any trailing characters */
+	if (str[i] != '\0')
+		return (0);
+
+	return (has_digit);
+}
+
+static unsigned char	get_exit_code(const char *str)
+{
+	long long	num;
+	int		sign;
+	int		i;
+	int		in_quotes;
+
+	num = 0;
+	sign = 1;
+	i = 0;
+	in_quotes = 0;
+
+	/* Skip leading spaces */
+	while (ft_isspace(str[i]))
+		i++;
+
+	/* Handle sign before quote */
+	if (str[i] == '+' || str[i] == '-')
+	{
+		sign = (str[i] == '-') ? -1 : 1;
+		i++;
+	}
+
+	/* Handle opening quote */
+	if (str[i] == '\'' || str[i] == '"')
+	{
+		in_quotes = str[i];
+		i++;
+		/* If sign is after opening quote, handle it again */
+		if (str[i] == '+' || str[i] == '-')
+		{
+			sign = (str[i] == '-') ? -1 : 1;
+			i++;
+		}
+	}
+
+	/* Convert number */
+	while (ft_isdigit(str[i]))
+	{
+		num = num * 10 + (str[i] - '0');
+		i++;
+	}
+
+	/* Skip closing quote if any */
+	if (in_quotes && str[i] == in_quotes)
+		i++;
+
+	/* Calculate exit code */
+	if (sign == -1)
+	{
+		num = (256 - (num % 256)) % 256;
+	}
+	else
+	{
+		num = num % 256;
+	}
+
+	return ((unsigned char)num);
+}
+
+static int	has_too_many_args(char **args)
+{
+	int	count;
+
+	count = 0;
+	while (args[count])
+		count++;
+	return (count > 2);
+}
+
 int	cmd_exit(t_shell *shell, char **args)
 {
-	int	exit_code;
+	/* Muestra el mensaje "exit" solo si estamos en modo interactivo */
+	if (isatty(STDIN_FILENO))
+		ft_putendl_fd("exit", 2);
 
-	/* Muestra el mensaje "exit" */
-	ft_putendl_fd("exit", 2);
-
-	/* Sin argumentos: sale con código 0 */
+	/* Sin argumentos: sale con el último estado de salida */
 	if (!args[1])
 		exit(shell->exit_status);
 
-	/* Verifica que el argumento sea numérico */
-	if (!is_numeric(args[1]))
-	{
-		ft_putendl_fd(ERR_PREFIX"exit"ERR_NUM_ARG, 2);
-		exit(255);
-	}
-
-	/* Convierte el argumento a número */
-	exit_code = ft_atoi(args[1]);
-
 	/* Verifica si hay demasiados argumentos */
-	if (args[2])
+	if (has_too_many_args(args))
 	{
-		ft_putendl_fd(ERR_EXIT_ARGS, 2);
+		ft_putstr_fd(ERR_PREFIX"exit: ", 2);
+		ft_putendl_fd("too many arguments", 2);
 		return (1);
 	}
 
-	/* Sale con el código especificado */
-	exit(exit_code % 256);
+	/* Verifica si el argumento es numérico */
+	if (!is_valid_number(args[1]))
+	{
+		ft_putstr_fd(ERR_PREFIX"exit: ", 2);
+		ft_putstr_fd(args[1], 2);
+		ft_putendl_fd(": numeric argument required", 2);
+		exit(2);
+	}
+
+	/* Obtiene el código de salida y sale */
+	exit(get_exit_code(args[1]));
 }

@@ -42,36 +42,30 @@ static int	get_token_length(char *str, int start)
 {
 	int	len;
 	char	quote;
-	int	word_start;
 
 	len = 0;
 	quote = 0;
-	word_start = 1;
 
 	if (is_special_char(str[start]))
 		return (1);
 
 	while (str[start + len])
 	{
-		// Si encontramos una comilla al inicio de la palabra
-		if (word_start && (str[start + len] == '\'' || str[start + len] == '"'))
+		// Si encontramos una comilla que no está escapada
+		if ((str[start + len] == '\'' || str[start + len] == '"') 
+			&& (len == 0 || str[start + len - 1] != '\\'))
 		{
-			quote = str[start + len];
-			word_start = 0;
+			if (quote == 0)
+				quote = str[start + len]; // Abrir comilla
+			else if (quote == str[start + len])
+				quote = 0; // Cerrar comilla
 		}
-		// Si encontramos una comilla que cierra
-		else if (quote && str[start + len] == quote)
-		{
-			quote = 0;
-			word_start = 1;
-		}
-		// Si no estamos en comillas y encontramos un delimitador
-		else if (!quote && (is_special_char(str[start + len]) ||
+		// Si no estamos dentro de comillas y encontramos un delimitador
+		else if (quote == 0 && (is_special_char(str[start + len]) || 
 			str[start + len] == ' ' || str[start + len] == '\t'))
+		{
 			break;
-		// En cualquier otro caso, no es inicio de palabra
-		else
-			word_start = 0;
+		}
 		len++;
 	}
 	return (len);
@@ -143,60 +137,49 @@ char	**tokenize(char *input)
 		if (!input[i])
 			break;
 
-		if (!is_special_char(input[i]) || 
-			(input[i] == input[i + 1] && (input[i] == '<' || input[i] == '>')))
+		// Manejar operadores de redirección dobles (>>, <<)
+		if ((input[i] == '>' && input[i + 1] == '>') || 
+			(input[i] == '<' && input[i + 1] == '<'))
 		{
-			len = get_token_length(input, i);
-			new_tokens = malloc(sizeof(char *) * (token_count + 2));
-			if (!new_tokens)
-			{
-				free_array(tokens);
-				return (NULL);
-			}
-
-			int j;
-			for (j = 0; j < token_count; j++)
-				new_tokens[j] = tokens[j];
-
-			new_tokens[token_count] = ft_substr(input, i, len);
-			if (!new_tokens[token_count])
-			{
-				free(new_tokens);
-				free_array(tokens);
-				return (NULL);
-			}
-
-			new_tokens[token_count + 1] = NULL;
-			token_count++;
-			i += len;
+			len = 2; // Longitud fija de 2 para los operadores dobles
 		}
+		// Manejar operadores de redirección simples (<, >) que no son parte de un operador doble
+		else if (is_special_char(input[i]) && 
+			   !((input[i] == '>' && input[i + 1] == '>') || 
+			     (input[i] == '<' && input[i + 1] == '<')))
+		{
+			len = 1; // Longitud fija de 1 para los operadores simples
+		}
+		// Para cualquier otro token
 		else
 		{
-			len = 1;
-			new_tokens = malloc(sizeof(char *) * (token_count + 2));
-			if (!new_tokens)
-			{
-				free_array(tokens);
-				return (NULL);
-			}
-
-			int j;
-			for (j = 0; j < token_count; j++)
-				new_tokens[j] = tokens[j];
-
-			new_tokens[token_count] = ft_substr(input, i, len);
-			if (!new_tokens[token_count])
-			{
-				free(new_tokens);
-				free_array(tokens);
-				return (NULL);
-			}
-
-			new_tokens[token_count + 1] = NULL;
-			token_count++;
-			i += len;
+			len = get_token_length(input, i);
 		}
 
+		new_tokens = malloc(sizeof(char *) * (token_count + 2));
+		if (!new_tokens)
+		{
+			free_array(tokens);
+			return (NULL);
+		}
+
+		int j;
+		for (j = 0; j < token_count; j++)
+			new_tokens[j] = tokens[j];
+
+		new_tokens[token_count] = ft_substr(input, i, len);
+		if (!new_tokens[token_count])
+		{
+			free(new_tokens);
+			free_array(tokens);
+			return (NULL);
+		}
+
+		new_tokens[token_count + 1] = NULL;
+		token_count++;
+		i += len;
+
+		// Liberar el array de tokens anterior
 		if (tokens)
 			free(tokens);
 		tokens = new_tokens;

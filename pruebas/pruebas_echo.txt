@@ -43,3 +43,8 @@ e"c"ho "$uasgasg"
 
 e"c"ho '"$uasgasg"'
 "$uasgasg"        # mantiene el texto literal
+
+
+
+
+preuabs redirrecciones

@@ -130,3 +130,12 @@ patata
 mgrillo@c2r5s3:~$ echo $kk patata
 echo patata
 mgrillo@c2r5s3:~$ ">"^C
+
+
+
+
+
+
+>kk">" ls
+
+

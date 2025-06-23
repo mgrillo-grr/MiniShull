@@ -25,8 +25,20 @@ SRCS = 	./src/main.c \
 		./src/parser/expander.c \
 		./src/executor/executor.c \
 		./src/executor/redirections.c \
+		./src/executor/redir_utils.c \
+		./src/executor/heredoc.c \
+		./src/executor/heredoc_utils.c \
+		./src/executor/heredoc_utils2.c \
 		./src/executor/pipes.c \
+		./src/executor/pipes_utils.c \
+		./src/executor/pipes_utils2.c \
+		./src/executor/pipes_utils3.c \
+		./src/executor/pipes_utils4.c \
 		./src/executor/builtins.c \
+		./src/executor/builtin_utils.c \
+		./src/executor/command_path.c \
+		./src/executor/command_execution.c \
+		./src/executor/command_utils.c \
 		./src/env/env_utils.c \
 		./src/env/env_array.c \
 		./src/signals/signals.c \

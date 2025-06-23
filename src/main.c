@@ -46,15 +46,6 @@ static void	init_shell(t_shell *shell, char **envp)
 }
 
 
-static const char *g_colors[NUM_COLORS] = {
-	COLOR_RED,
-	COLOR_MAGENTA,
-	COLOR_YELLOW,
-	COLOR_GREEN,
-	COLOR_BLUE,
-	COLOR_CYAN
-};
-
 
 static char	*get_prompt(t_shell *shell)
 {
@@ -63,7 +54,6 @@ static char	*get_prompt(t_shell *shell)
 	char	cwd[MAX_PATH_LEN];
 	char	*prompt;
 	char	*home;
-	char	*color;
 
 	user = get_env_value(shell->env, "USER");
 	if (!user)
@@ -77,18 +67,25 @@ static char	*get_prompt(t_shell *shell)
 	if (!getcwd(cwd, MAX_PATH_LEN))
 		ft_strlcpy(cwd, "~", MAX_PATH_LEN);
 	home = get_env_value(shell->env, "HOME");
-	if (home && ft_strncmp(cwd, home, ft_strlen(home)) == 0)
+	if (home && *home)
 	{
-		cwd[0] = '~';
-		ft_memmove(cwd + 1, cwd + ft_strlen(home), 
-			ft_strlen(cwd) - ft_strlen(home) + 1);
+		size_t home_len = ft_strlen(home);
+		size_t cwd_len = ft_strlen(cwd);
+		if (ft_strncmp(cwd, home, home_len) == 0 && (cwd[home_len] == '/' || cwd[home_len] == '\0'))
+		{
+			if (cwd_len == home_len)
+				ft_strlcpy(cwd, "~", MAX_PATH_LEN);
+			else
+			{
+				cwd[0] = '~';
+				ft_memmove(cwd + 1, cwd + home_len, cwd_len - home_len + 1);
+			}
+		}
 	}
-	shell->color_index = (shell->color_index + 1) % NUM_COLORS;
-	color = (char *)g_colors[shell->color_index];
 	prompt = ft_calloc(MAX_PATH_LEN + HOST_NAME_MAX + 100, sizeof(char));
 	if (!prompt)
 		return (ft_strdup("$ "));
-	sprintf(prompt, PROMPT, user, hostname, cwd, color);
+	sprintf(prompt, PROMPT, user, hostname, cwd);
 	return (prompt);
 }
 
@@ -100,8 +97,6 @@ int	main(int argc, char **argv, char **envp)
 	t_shell	shell;
 	char	*input;
 	char	*prompt;
-	char	*cmd_name;
-
 	(void)argc;
 	(void)argv;
 	init_shell(&shell, envp);
@@ -117,21 +112,16 @@ int	main(int argc, char **argv, char **envp)
 		}
 		if (*input)
 		{
-			cmd_name = NULL;
 			add_history(input);
 			shell.cmd = parse_input(input, &shell);
 			if (!shell.cmd && *input)
 			{
 				handle_unclosed_quotes(&shell);
 			}
-			else if (shell.cmd && shell.cmd->args && shell.cmd->args[0])
+			else if (shell.cmd)
 			{
-				cmd_name = ft_strdup(shell.cmd->args[0]);
-				if (cmd_name)
-				{
-					shell.exit_status = execute_cmd(&shell);
-					free(cmd_name);
-				}
+				// Ejecutar el comando (puede ser solo redirecciones o un comando completo)
+				shell.exit_status = execute_cmd(&shell);
 			}
 			if (shell.cmd)
 				free_cmd(shell.cmd);
